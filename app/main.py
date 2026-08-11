@@ -23,7 +23,7 @@ async def startup_event():
         conn.commit()
 
 app.include_router(users_router, prefix=settings.API_V1_STR)
-# app.include_router(rag_router, prefix=settings.API_V1_STR)
+app.include_router(rag_router, prefix=settings.API_V1_STR)
 
 @app.get(f"/api/v1/health", tags=["Health"])
 def health_check():
