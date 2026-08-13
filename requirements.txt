@@ -23,3 +23,9 @@ python-jose
 bcrypt==3.2.2
 passlib[bcrypt]==1.7.4
 python-dotenv
+
+# Parsing
+python-multipart==0.0.20
+pypdf==6.0.0
+python-docx==1.2.0
+openpyxl==3.1.5

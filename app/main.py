@@ -4,6 +4,8 @@ from app.core.db import Base, engine
 
 from app.modules.users.router import router as users_router
 from app.modules.rag.router import router as rag_router
+from app.modules.document.router import router as document_router
+
 from app.modules.users import models as user_models
 
 from sqlalchemy import text
@@ -24,6 +26,7 @@ async def startup_event():
 
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(rag_router, prefix=settings.API_V1_STR)
+app.include_router(document_router, prefix=settings.API_V1_STR)
 
 @app.get(f"/api/v1/health", tags=["Health"])
 def health_check():
