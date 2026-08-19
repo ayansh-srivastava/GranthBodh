@@ -1,5 +1,5 @@
 import uuid6
-from sqlalchemy import Column, String, Boolean, Text, ForeignKey, Integer, Index, JSON
+from sqlalchemy import Column, String, Boolean, Text, ForeignKey, Integer, Index, JSON, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
@@ -19,8 +19,8 @@ class Document(Base):
     __tablename__ = "documents"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid6.uuid7)
-
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+    created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False )
 
     title = Column(String(255), nullable=False)
     source = Column(String(1023))

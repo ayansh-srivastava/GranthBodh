@@ -17,27 +17,26 @@ class RAGService:
         self.model = model
         self.dimension = 768
 
-    def get_embedding(self, text: str) -> list[float]:
-        response = self.client.models.embed_content(
-            model=self.model,
-            contents=text,
-            config=types.EmbedContentConfig(
-                task_type="RETRIEVAL_DOCUMENT",
-                output_dimensionality=self.dimension,
-            ),
-        )
+    async def get_embeddings(self, texts: List[str], batch_size: int = 64) -> List[List[float]]:
+        all_embeddings = []
 
-        embedding = response.embeddings[0].values
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
 
-        if len(embedding) != self.dimension:
-            raise ValueError(
-                f"Expected {self.dimension} dimensions, "
-                f"got {len(embedding)}"
+            response = await asyncio.to_thread(
+                self.client.models.embed_content,
+                model=self.model,
+                contents=batch,
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=self.dimension,
+                ),
             )
+            all_embeddings.extend([embedding.values for embedding in response.embeddings])
 
-        return embedding
+        return all_embeddings
 
-    def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         loop = asyncio.get_event_loop()
 
         def batch_call():
@@ -50,7 +49,7 @@ class RAGService:
             ),
         )
 
-        response = loop.run_in_executor(None, batch_call)
+        response = await loop.run_in_executor(None, batch_call)
 
         return [embedding.values for embedding in response.embeddings]
 

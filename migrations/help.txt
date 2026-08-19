@@ -1,0 +1,2 @@
+
+docker compose exec db psql -U rag_user -d rag_db -f /migrations/003_add_created_at.sql

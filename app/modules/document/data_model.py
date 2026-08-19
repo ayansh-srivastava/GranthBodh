@@ -12,8 +12,25 @@ class Element:
     section_path: list[str] = field(default_factory=list)
     location: dict[str, Any] = field(default_factory=dict)
 
+    @classmethod
+    def to_json(cls, element: "Element") -> dict[str, Any]:
+        return {
+            "text": element.text,
+            "element_type": element.element_type,
+            "level": element.level,
+            "section_path": element.section_path,
+            "location": element.location,
+        }
+
 @dataclass
 class DocumentBlock:
     # Final RAG-ready chunk.
     text: str
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def to_json(cls, block: "DocumentBlock") -> dict[str, Any]:
+        return {
+            "text": block.text,
+            "metadata": block.metadata,
+        }
