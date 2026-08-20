@@ -95,8 +95,5 @@ class DocumentService:
             session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to process document: {str(exc)}")
 
-            # raise HTTPException( status_code=400, detail=f"Failed to parse document: {str(exc)}")
-
-
 
 document_service = DocumentService()

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Any, Dict
 
 class EmbedRequest(BaseModel):
     text: str
@@ -14,7 +14,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
-    sources: List[str]
+    sources: List[Dict[str, Any]]
 
 class DocumentUploadResponse(BaseModel):
     id: str
