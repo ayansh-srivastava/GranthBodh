@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.db import Base, engine
 
@@ -6,7 +7,7 @@ from app.modules.users.router import router as users_router
 from app.modules.rag.router import router as rag_router
 from app.modules.document.router import router as document_router
 
-from app.modules.users import models as user_models
+from app.core import db_models as user_models
 
 from sqlalchemy import text
 
@@ -15,6 +16,17 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 print(f"API documentation available at http://localhost:8000{settings.API_V1_STR}/openapi.json")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 async def startup_event():

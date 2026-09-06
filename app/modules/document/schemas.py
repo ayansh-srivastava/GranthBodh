@@ -5,3 +5,7 @@ class DocumentUploadResponse(BaseModel):
     filename: str
     content_type: str
     message: str
+
+class DocumentItem(BaseModel):
+    id: str
+    filename: str

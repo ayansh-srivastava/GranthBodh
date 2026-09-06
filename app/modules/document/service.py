@@ -4,10 +4,10 @@ from fastapi import UploadFile, HTTPException
 
 from app.modules.document.constants import ALLOWED_EXTENSIONS, ALLOWED_CONTENT_TYPES
 from app.modules.document.chunker import TokenAwareChunker
-from app.modules.document.schemas import DocumentUploadResponse
+from app.modules.document.schemas import DocumentUploadResponse, DocumentItem
 from app.modules.document.document_parser import DocumentParser
 from app.modules.document.data_model import DocumentBlock
-from app.modules.users.models import Document, Chunk
+from app.core.db_models import Document, Chunk
 from app.modules.rag.service import rag_service
 
 
@@ -95,5 +95,35 @@ class DocumentService:
             session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to process document: {str(exc)}")
 
+    @classmethod
+    async def get_documents(cls, user: str, session) -> list[DocumentItem]:
+        try:
+            documents = session.query(Document).filter_by(user_id=user).all()
+            return [
+                DocumentItem(
+                    id=str(doc.id),
+                    filename=doc.title
+                )
+                for doc in documents
+            ]
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve documents: {str(exc)}")
+
+    @classmethod
+    async def delete_document(cls, document_id: str, user: str, session) -> dict:
+        try:
+            document = session.query(Document).filter_by(id=document_id, user_id=user).first()
+            if not document:
+                raise HTTPException(status_code=404, detail="Document not found")
+
+            session.delete(document)
+            session.commit()
+            return {"message": "Document deleted successfully"}
+        except HTTPException:
+            session.rollback()
+            raise
+        except Exception as exc:
+            session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to delete document: {str(exc)}")
 
 document_service = DocumentService()

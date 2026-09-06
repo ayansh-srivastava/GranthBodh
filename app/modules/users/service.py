@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from datetime import timedelta
 
-from app.modules.users.models import User
+from app.core.db_models import User
 from app.core.security import hash_password, verify_password
 from app.core.jwt_utitls import create_access_token, create_refresh_token
 from app.core.config import settings
