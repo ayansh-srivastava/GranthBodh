@@ -96,6 +96,14 @@ class RAGService:
 
         session.add(message)
         session.flush()
+        return {
+            "id": str(message.id),
+            "created_at": message.created_at.isoformat(),
+            "conversation_id": str(message.conversation_id),
+            "user_id": str(message.user_id),
+            "role": message.role,
+            "content": message.content,
+        }
 
     async def rewrite_query(
         self,
@@ -152,8 +160,7 @@ class RAGService:
             contents.append(
                 types.Content(
                     role=message["role"],
-                    parts=[types.Part(text=message["content"])],
-                    rewritten_content=message.get("rewritten_content", None),
+                    parts=[types.Part(text=message.get("rewritten_content") or message.get("content", ""))],
                 )
             )
 
@@ -189,9 +196,11 @@ class RAGService:
         messages = (
             session.query(Message)
             .filter_by(conversation_id=conversation_id, user_id=user_id)
-            .order_by(Message.timestamp.asc())
+            .order_by(Message.created_at.desc())
             .limit(5)
+            .all()
         )
+        messages.reverse()
 
         history = [
             {"role": message.role, "content": message.content, "rewritten_content": message.rewritten_content if message.rewritten_content else None}
@@ -218,13 +227,13 @@ class RAGService:
 
         question = await self.rewrite_query(question=payload.question, history=history)
 
-
-
         chunks = await self.retrieve_chunks(session=session, query=question, top_k=5)
 
         if not chunks:
+            await self.save_message(session=session, conversation_id=conversation_id, role="user", content=payload.question, user_id=user_id, rewritten_content=question)
+            message = await self.save_message(session=session, conversation_id=conversation_id, role="assistant", content="I don't know.", user_id=user_id)
             return {
-                "answer": "I don't know. Please upload relevant documents or provide more context.",
+                "answer": message,
                 "sources": [],
                 "conversation_id": conversation_id,
             }
@@ -246,12 +255,13 @@ class RAGService:
         """
         res = await self.generate_rag_response(conversation_id=conversation_id, prompt=prompt, chunks=chunks, history=history)
         await self.save_message(session=session, conversation_id=conversation_id, role="user", content=payload.question, user_id=user_id, rewritten_content=question)
-        await self.save_message(session=session, conversation_id=conversation_id, role="assistant", content=res["answer"], user_id=user_id)
+        message =await self.save_message(session=session, conversation_id=conversation_id, role="assistant", content=res["answer"], user_id=user_id)
         try:
             session.commit()
         except Exception as e:
             session.rollback()
             raise e
+        res["answer"] = message
         return res
 
     async def get_conversations(self, page, session, user_id: str) -> GetConversationsResponse:
@@ -275,25 +285,27 @@ class RAGService:
             total_pages=(session.query(Conversation).filter_by(user_id=user_id).count() + 19) // 20,
         )
 
-    async def get_messages(self, session, conversation_id: str, page: int, user_id: str) -> list[dict]:
+    async def get_messages(self, conversation_id: str, page: int, user_id: str, session) -> list[dict]:
         messages = (
             session.query(Message)
             .filter_by(conversation_id=conversation_id, user_id=user_id)
-            .order_by(Message.timestamp.asc())
+            .order_by(Message.created_at.desc())
             .limit(20)
             .offset((page - 1) * 20)
+            .all()
         )
+        messages.reverse()
 
         return {
             "messages": [
                 {
                     "id": str(message.id),
-                    "created_at": message.timestamp.isoformat(),
+                    "created_at": message.created_at.isoformat(),
                     "conversation_id": str(message.conversation_id),
                     "user_id": str(message.user_id),
                 "role": message.role,
                 "content": message.content,
-                "rewritten_content": message.rewritten_content if message.rewritten_content else None,
+                # "rewritten_content": message.rewritten_content if message.rewritten_content else None,
             }
             for message in messages
         ],
