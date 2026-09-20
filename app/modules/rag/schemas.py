@@ -29,6 +29,10 @@ class ConversationItem(BaseModel):
     title: str
     created_at: str
 
+class GetConversationsResponse(BaseModel):
+    conversations: List[ConversationItem]
+    total_pages: int
+
 class MessageItem(BaseModel):
     id: str
     created_at: str
@@ -37,3 +41,7 @@ class MessageItem(BaseModel):
 
     role: str
     content: str
+
+class GetMessageResaponse(BaseModel):
+    messages: List[MessageItem]
+    total_pages: int

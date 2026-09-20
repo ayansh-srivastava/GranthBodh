@@ -4,7 +4,7 @@ from fastapi import UploadFile, HTTPException
 
 from app.modules.document.constants import ALLOWED_EXTENSIONS, ALLOWED_CONTENT_TYPES
 from app.modules.document.chunker import TokenAwareChunker
-from app.modules.document.schemas import DocumentUploadResponse, DocumentItem
+from app.modules.document.schemas import DocumentUploadResponse, DocumentItem, GetDocumentsResponse
 from app.modules.document.document_parser import DocumentParser
 from app.modules.document.data_model import DocumentBlock
 from app.core.db_models import Document, Chunk
@@ -96,16 +96,26 @@ class DocumentService:
             raise HTTPException(status_code=500, detail=f"Failed to process document: {str(exc)}")
 
     @classmethod
-    async def get_documents(cls, user: str, session) -> list[DocumentItem]:
+    async def get_documents(cls, page: int, user: str, session) -> GetDocumentsResponse:
         try:
-            documents = session.query(Document).filter_by(user_id=user).all()
-            return [
-                DocumentItem(
-                    id=str(doc.id),
-                    filename=doc.title
-                )
-                for doc in documents
-            ]
+            documents = (
+                session.query(Document)
+                .filter_by(user_id=user)
+                .order_by(Document.created_at.desc())
+                .limit(10)
+                .offset((page - 1) * 10).all()
+            )
+            return {
+                "documents": [
+                    DocumentItem(
+                        id=str(doc.id),
+                        filename=doc.title
+                    )
+                    for doc in documents
+                ],
+                "total_count": session.query(Document).filter_by(user_id=user).count()
+            }
+
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Failed to retrieve documents: {str(exc)}")
 

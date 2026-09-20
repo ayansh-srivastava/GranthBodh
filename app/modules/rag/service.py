@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.db_models import Chunk, Message, Conversation
-from app.modules.rag.schemas import QueryRequest
+from app.modules.rag.schemas import GetConversationsResponse, QueryRequest, QueryResponse
 
 class RAGService:
     def __init__(self, model: str = "gemini-embedding-001"):
@@ -85,8 +85,9 @@ class RAGService:
 
         return chunks
 
-    async def save_message(self, session, conversation_id: str, role: str, content: str, rewritten_content: str | None = None):
+    async def save_message(self, session, conversation_id: str, role: str, content: str, user_id: str, rewritten_content: str | None = None,):
         message = Message(
+            user_id=user_id,
             conversation_id=conversation_id,
             role=role,
             content=content,
@@ -244,11 +245,16 @@ class RAGService:
             4. Answer as short as possible, ideally in one or two sentences not more than one paragraph.
         """
         res = await self.generate_rag_response(conversation_id=conversation_id, prompt=prompt, chunks=chunks, history=history)
-        await self.save_message(session=session, conversation_id=conversation_id, role="user", content=payload.question, rewritten_content=question)
-        await self.save_message(session=session, conversation_id=conversation_id, role="assistant", content=res["answer"])
+        await self.save_message(session=session, conversation_id=conversation_id, role="user", content=payload.question, user_id=user_id, rewritten_content=question)
+        await self.save_message(session=session, conversation_id=conversation_id, role="assistant", content=res["answer"], user_id=user_id)
+        try:
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         return res
 
-    async def get_conversations(self, page, session, user_id: str) -> list[dict]:
+    async def get_conversations(self, page, session, user_id: str) -> GetConversationsResponse:
         conversations = (
             session.query(Conversation)
             .filter_by(user_id=user_id)
@@ -257,14 +263,17 @@ class RAGService:
             .offset((page-1) * 20)
         )
 
-        return [
-            {
-                "id": str(conversation.id),
-                "title": conversation.title,
-                "created_at": conversation.created_at.isoformat(),
-            }
-            for conversation in conversations
-        ]
+        return GetConversationsResponse(
+            conversations=[
+                {
+                    "id": str(conversation.id),
+                    "title": conversation.title,
+                    "created_at": conversation.created_at.isoformat(),
+                }
+                for conversation in conversations
+            ],
+            total_pages=(session.query(Conversation).filter_by(user_id=user_id).count() + 19) // 20,
+        )
 
     async def get_messages(self, session, conversation_id: str, page: int, user_id: str) -> list[dict]:
         messages = (
@@ -275,17 +284,20 @@ class RAGService:
             .offset((page - 1) * 20)
         )
 
-        return [
-            {
-                "id": str(message.id),
-                "created_at": message.timestamp.isoformat(),
-                "conversation_id": str(message.conversation_id),
-                "user_id": str(message.user_id),
+        return {
+            "messages": [
+                {
+                    "id": str(message.id),
+                    "created_at": message.timestamp.isoformat(),
+                    "conversation_id": str(message.conversation_id),
+                    "user_id": str(message.user_id),
                 "role": message.role,
                 "content": message.content,
                 "rewritten_content": message.rewritten_content if message.rewritten_content else None,
             }
             for message in messages
-        ]
+        ],
+            "total_pages": (session.query(Message).filter_by(conversation_id=conversation_id, user_id=user_id).count() + 19) // 20,
+        }
 
 rag_service = RAGService()

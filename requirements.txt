@@ -23,6 +23,7 @@ python-jose
 bcrypt==3.2.2
 passlib[bcrypt]==1.7.4
 python-dotenv
+PyJWT
 
 # Parsing
 google-genai==2.14.0

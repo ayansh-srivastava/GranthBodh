@@ -2,6 +2,8 @@ from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
+import jwt
+
 from datetime import timedelta
 
 from app.core.db_models import User
@@ -70,3 +72,30 @@ class UserService:
             raise e
         except Exception as e:
             raise HTTPException(500, f"Error during login: {str(e)}")
+
+    @staticmethod
+    def refresh_token(db: Session, refresh_token: str):
+        try:
+            payload = jwt.decode(refresh_token, settings.HASH_SECRET_KEY, algorithms=[settings.ALGORITHM])
+            if payload.get("type") != "refresh":
+                raise HTTPException(401, "Invalid token type")
+
+            user_id = payload.get("sub")
+            user = db.query(User).filter(User.id == user_id).first()
+
+            if not user:
+                raise HTTPException(404, "User not found")
+
+            access = create_access_token(
+                {"sub": str(user.id)},
+                timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            )
+            refresh = refresh_token
+
+            return {"access_token": access, "refresh_token": refresh}
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(401, "Refresh token expired")
+        except jwt.JWTError:
+            raise HTTPException(401, "Invalid refresh token")
+        except Exception as e:
+            raise HTTPException(500, f"Error during token refresh: {str(e)}")

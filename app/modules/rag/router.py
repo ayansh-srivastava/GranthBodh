@@ -1,7 +1,7 @@
 import traceback
 
 from fastapi import Depends, APIRouter, HTTPException, status
-from app.modules.rag.schemas import ConversationItem, MessageItem, QueryRequest, QueryResponse
+from app.modules.rag.schemas import GetConversationsResponse, GetMessageResaponse, QueryRequest, QueryResponse
 from app.modules.rag.service import rag_service
 from app.core.deps import get_current_user
 from app.core.db import get_db
@@ -20,15 +20,15 @@ router = APIRouter(prefix="/rag", tags=["RAG Backend"])
 async def get_answer(payload: QueryRequest, user: str = Depends(get_current_user), session=Depends(get_db)):
     try:
         result = await rag_service.answer_question(session=session, payload=payload, user_id=user)
-        return QueryResponse(answer=result["answer"], sources=result["sources"])
+        return QueryResponse(answer=result["answer"], sources=result["sources"], conversation_id=result["conversation_id"])
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
 
-@router.get("/conversations/{page}", response_model=list[ConversationItem], status_code=status.HTTP_200_OK)
+@router.get("/conversations", response_model=GetConversationsResponse, status_code=status.HTTP_200_OK)
 async def get_conversations(page: int, user: str = Depends(get_current_user), session=Depends(get_db)):
     return await rag_service.get_conversations(page, session, user)
 
-@router.get("/messages/{conversation_id}/{page}", response_model=list[MessageItem], status_code=status.HTTP_200_OK)
+@router.get("/messages", response_model=GetMessageResaponse, status_code=status.HTTP_200_OK)
 async def get_messages(conversation_id: str, page: int, user: str = Depends(get_current_user), session=Depends(get_db)):
     return await rag_service.get_messages(conversation_id, page, user, session)

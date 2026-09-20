@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
@@ -11,9 +13,22 @@ from app.core import db_models as user_models
 
 from sqlalchemy import text
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting up the application...")
+
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+
+    Base.metadata.create_all(bind=engine)
+
+    yield
+    print("Shutting down the application...")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 print(f"API documentation available at http://localhost:8000{settings.API_V1_STR}/openapi.json")
 
@@ -27,14 +42,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    print("Starting up the application...")
-    with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        Base.metadata.create_all(bind=engine)
-        conn.commit()
 
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(rag_router, prefix=settings.API_V1_STR)

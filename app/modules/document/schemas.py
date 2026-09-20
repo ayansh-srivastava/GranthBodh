@@ -9,3 +9,7 @@ class DocumentUploadResponse(BaseModel):
 class DocumentItem(BaseModel):
     id: str
     filename: str
+
+class GetDocumentsResponse(BaseModel):
+    documents: list[DocumentItem]
+    total_count: int
