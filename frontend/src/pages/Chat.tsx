@@ -34,7 +34,7 @@ export default function Chat() {
 
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [conversationsPage, setConversationsPage] = useState<number>(1);
-  const [totalConversationPages, setTotalConversationPages] = useState<number>(0);
+   const [totalConversationPages, setTotalConversationPages] = useState<number>(0);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
@@ -45,8 +45,19 @@ export default function Chat() {
   const [totalMessagesPages, setTotalMessagesPages] = useState<number>(1);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+
+
+  const handleNotification = (state: { type: 'success' | 'error'; message: string }) => {
+    setNotification(state);
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  };
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -55,6 +66,9 @@ export default function Chat() {
       return;
     }
 
+    setUploadingDocument(true);
+    const fileName = files[0].name;
+
     uploadDocument(files[0])
       .then((response) => {
         setDocuments((prevDocuments) => [
@@ -62,9 +76,19 @@ export default function Chat() {
           { id: response.id, filename: response.filename },
         ]);
         setTotalDocuments((prevTotal) => prevTotal + 1);
+        handleNotification({
+          type: 'success',
+          message: `"${fileName}" uploaded successfully!`,
+        });
       })
       .catch((error) => {
-        console.error("Error uploading document:", error);
+        handleNotification({
+          type: 'error',
+          message: `Failed to upload "${fileName}". Please try again. Error: ${error.message}`,
+        });
+      })
+      .finally(() => {
+        setUploadingDocument(false);
       });
 
     e.target.value = "";
@@ -124,8 +148,8 @@ export default function Chat() {
           ...response.documents,
         ]);
         setTotalDocuments(response.total_count);
-      } catch (error) {
-        console.error("Error fetching documents:", error);
+      } catch (error:unknown) {
+        handleNotification({ type: "error", message: `Error fetching documents: ${error.message}` });
       } finally {
         setLoadingDocuments(false);
       }
@@ -146,8 +170,8 @@ export default function Chat() {
           ]);
           setDocumentsPage((prevPage) => prevPage + 1);
         })
-        .catch((error) => {
-          console.error("Error fetching documents:", error);
+        .catch((error: unknown) => {
+          handleNotification({ type: "error", message: `Error fetching documents: ${error.message}` });
         })
         .finally(() => {
           setLoadingDocuments(false);
@@ -165,9 +189,10 @@ export default function Chat() {
           ...response.conversations,
         ]);
         setTotalConversationPages(response.total_pages);
-      } catch (error) {
+      } catch (error: unknown) {
+        handleNotification({ type: "error", message: `Error fetching conversations: ${error.message}` });
         console.error("Error fetching conversations:", error);
-      } finally {
+      }finally {
         setLoadingConversations(false);
       }
     };
@@ -187,8 +212,8 @@ export default function Chat() {
           ]);
           setConversationsPage((prevPage) => prevPage + 1);
         })
-        .catch((error) => {
-          console.error("Error fetching conversations:", error);
+        .catch((error: unknown) => {
+          handleNotification({ type: "error", message: `Error fetching conversations: ${error.message}` });
         })
         .finally(() => {
           setLoadingConversations(false);
@@ -209,8 +234,8 @@ export default function Chat() {
       setMessages((prevMessages) => [...response.messages, ...prevMessages]);
       setMessagesPage(page);
       setTotalMessagesPages(response.total_pages);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
+    } catch (error: unknown) {
+      handleNotification({ type: "error", message: `Error fetching messages: ${error.message}` });
     } finally {
       setLoadingMessages(false);
     }
@@ -383,12 +408,29 @@ export default function Chat() {
             type="button"
             className="upload-button"
             onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingDocument}
           >
-            <Plus size={15} />
-            <span>Upload documents</span>
+            {uploadingDocument ? (
+              <>
+                <Loader2 size={15} className="spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <Plus size={15} />
+                <span>Upload documents</span>
+              </>
+            )}
           </button>
         </div>
       </aside>
+
+      {/* Notification */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <span>{notification.message}</span>
+        </div>
+      )}
 
       {/* Main chat */}
       <main className="chat-main">
@@ -442,7 +484,7 @@ export default function Chat() {
               </div>
             </div>
           ) : (
-            <div className="message-list h-2" ref={messageListRef}>
+            <div className="message-list" ref={messageListRef}>
               {loadingMessages && (
                 <div className="loading-indicator">
                   <Loader2 size={18} className="spin" />

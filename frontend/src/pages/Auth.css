@@ -32,6 +32,64 @@
 }
 
 
+
+/* =========================================
+   NOTIFICATION
+========================================= */
+
+.notification {
+  position: fixed;
+  top: 45px;
+  left: 88%;
+  transform: translateX(-50%);
+
+  max-width: 400px;
+  width: calc(100% - 32px);
+
+  padding: 12px 16px;
+
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  z-index: 1000;
+
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.notification-success {
+  background: #0f3b38;
+  border: 1px solid #00d9b5;
+  color: #00d9b5;
+}
+
+.notification-error {
+  background: #3b1515;
+  border: 1px solid #ff6b6b;
+  color: #ff8787;
+}
+
+.notification span {
+  flex: 1;
+}
+
+
 /* --------------------------------
    LEFT BRANDING
 -------------------------------- */

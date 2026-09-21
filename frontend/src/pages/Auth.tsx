@@ -10,6 +10,7 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const navigate = useNavigate();
 
@@ -21,9 +22,8 @@ export default function Auth() {
             setSession(tokenResult);
             localStorage.setItem("authenticated", "true");
             navigate("/chat");
-        } catch (err) {
-            console.error(err);
-            alert("Login failed. Please check your credentials.");
+        } catch (err: unknown) {
+            setNotification({ type: "error", message: `Login failed. ${err.message}` });
         }
     } else {
         try {
@@ -31,9 +31,8 @@ export default function Auth() {
             setSession(tokenResult);
             localStorage.setItem("authenticated", "true");
             navigate("/chat");
-        } catch (err) {
-            console.error(err);
-            alert("Signup failed. Please try again.");
+        } catch (err: unknown) {
+            setNotification({ type: "error", message: `Signup failed. ${err.message}` });
         }
     }
   };
@@ -68,6 +67,13 @@ export default function Auth() {
             Private by design · Your sources stay yours
           </div>
         </div>
+
+        {/* Notification */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <span>{notification.message}</span>
+        </div>
+      )}
 
         {/* Right section */}
         <div className="auth-form-section">
