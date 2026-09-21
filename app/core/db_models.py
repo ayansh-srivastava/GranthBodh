@@ -75,7 +75,7 @@ class Message(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid6.uuid7)
 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
-    created_at = Column( DateTime(timezone=True), server_default=func.now(), nullable=False )
+    created_at = Column( DateTime(timezone=True), server_default=func.clock_timestamp(), nullable=False )
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), index=True, nullable=False)
 
     role = Column(String(15), nullable=False)

@@ -9,12 +9,22 @@ class EmbedResponse(BaseModel):
     status: str
     message: str
 
+class MessageItem(BaseModel):
+    id: str
+    created_at: str
+    conversation_id: str
+    user_id: str
+
+    role: str
+    content: str
+    rewritten_content: str = None
+
 class QueryRequest(BaseModel):
     question: str
-    conversation_id: str = None
+    conversation_id: str|None = None
 
 class QueryResponse(BaseModel):
-    answer: str
+    answer: MessageItem
     sources: List[Dict[str, Any]]
     conversation_id: str
 
@@ -32,15 +42,6 @@ class ConversationItem(BaseModel):
 class GetConversationsResponse(BaseModel):
     conversations: List[ConversationItem]
     total_pages: int
-
-class MessageItem(BaseModel):
-    id: str
-    created_at: str
-    conversation_id: str
-    user_id: str
-
-    role: str
-    content: str
 
 class GetMessageResaponse(BaseModel):
     messages: List[MessageItem]
