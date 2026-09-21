@@ -6,6 +6,7 @@ import {
   BookOpen,
   FileText,
   Plus,
+  Loader2,
 } from "lucide-react";
 
 import "./Chat.css";
@@ -29,17 +30,23 @@ export default function Chat() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [documentsPage, setDocumentsPage] = useState<number>(1);
   const [totalDocuments, setTotalDocuments] = useState<number>(0);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [conversationsPage, setConversationsPage] = useState<number>(1);
+  const [totalConversationPages, setTotalConversationPages] = useState<number>(0);
+  const [loadingConversations, setLoadingConversations] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   const [message, setMessage] = useState("");
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [messagesPage, setMessagesPage] = useState<number>(1);
+  const [totalMessagesPages, setTotalMessagesPages] = useState<number>(1);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -109,6 +116,7 @@ export default function Chat() {
 
   useEffect(() => {
     const fetchDocuments = async () => {
+      setLoadingDocuments(true);
       try {
         const response = await getDocuments(documentsPage);
         setDocuments((prevDocuments) => [
@@ -118,34 +126,74 @@ export default function Chat() {
         setTotalDocuments(response.total_count);
       } catch (error) {
         console.error("Error fetching documents:", error);
+      } finally {
+        setLoadingDocuments(false);
       }
     };
-    fetchDocuments();
-  }, [documentsPage]);
+    if (documentsPage === 1) {
+      fetchDocuments();
+    }
+  }, []);
 
   const loadMoreDocuments = () => {
-    if (documents.length < totalDocuments) {
-      setDocumentsPage((prevPage) => prevPage + 1);
+    if (documents.length < totalDocuments && !loadingDocuments) {
+      setLoadingDocuments(true);
+      getDocuments(documentsPage + 1)
+        .then((response) => {
+          setDocuments((prevDocuments) => [
+            ...prevDocuments,
+            ...response.documents,
+          ]);
+          setDocumentsPage((prevPage) => prevPage + 1);
+        })
+        .catch((error) => {
+          console.error("Error fetching documents:", error);
+        })
+        .finally(() => {
+          setLoadingDocuments(false);
+        });
     }
   };
 
   useEffect(() => {
     const fetchConversations = async () => {
+      setLoadingConversations(true);
       try {
         const response = await getConversations(conversationsPage);
         setConversations((prevConversations) => [
           ...prevConversations,
           ...response.conversations,
         ]);
+        setTotalConversationPages(response.total_pages);
       } catch (error) {
         console.error("Error fetching conversations:", error);
+      } finally {
+        setLoadingConversations(false);
       }
     };
-    fetchConversations();
-  }, [conversationsPage]);
+    if (conversationsPage === 1) {
+      fetchConversations();
+    }
+  }, []);
 
   const loadMoreConversations = () => {
-    setConversationsPage((prevPage) => prevPage + 1);
+    if (!loadingConversations) {
+      setLoadingConversations(true);
+      getConversations(conversationsPage + 1)
+        .then((response) => {
+          setConversations((prevConversations) => [
+            ...prevConversations,
+            ...response.conversations,
+          ]);
+          setConversationsPage((prevPage) => prevPage + 1);
+        })
+        .catch((error) => {
+          console.error("Error fetching conversations:", error);
+        })
+        .finally(() => {
+          setLoadingConversations(false);
+        });
+    }
   };
 
   const newConversation = () => {
@@ -155,23 +203,18 @@ export default function Chat() {
   };
 
   const fetchMessages = async (conversationId: string, page: number = 1) => {
+    setLoadingMessages(true);
     try {
-      console.log("Fetching messages for conversation:", conversationId, "page:", page);
       const response = await getMessages(conversationId, page);
-      setMessages((prevMessages) => [...prevMessages, ...response.messages]);
+      setMessages((prevMessages) => [...response.messages, ...prevMessages]);
+      setMessagesPage(page);
+      setTotalMessagesPages(response.total_pages);
     } catch (error) {
       console.error("Error fetching messages:", error);
+    } finally {
+      setLoadingMessages(false);
     }
   };
-
-  const loadMoreMessages = () => {
-    if (activeConversationId) {
-      const nextPage = messagesPage + 1;
-
-      setMessagesPage(nextPage);
-      fetchMessages(activeConversationId, nextPage);
-    }
-  }
 
   useEffect(() => {
 
@@ -184,7 +227,35 @@ export default function Chat() {
     };
 
     loadMessages();
-}, [activeConversationId]);
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    const messageList = messageListRef.current;
+    if (messageList) {
+      // Use setTimeout to ensure DOM is updated before scrolling
+      setTimeout(() => {
+        messageList.scrollTop = messageList.scrollHeight;
+      }, 0);
+    }
+  }, [messages]);
+
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const messageList = messageListRef.current;
+    if (!messageList || !activeConversationId) return;
+
+    const handleScroll = () => {
+      if (messageList.scrollTop < 100 && !loadingMessages && messagesPage < totalMessagesPages) {
+        const nextPage = messagesPage + 1;
+        setMessagesPage(nextPage);
+        fetchMessages(activeConversationId, nextPage);
+      }
+    };
+
+    messageList.addEventListener("scroll", handleScroll);
+    return () => messageList.removeEventListener("scroll", handleScroll);
+  }, [activeConversationId, messagesPage, loadingMessages]);
 
   const setConversation = async (conversationId: string) => {
     if (conversationId === activeConversationId) {
@@ -246,6 +317,23 @@ export default function Chat() {
                 </button>
               ))}
             </div>
+
+            {/* Load more conversations */}
+            {conversationsPage < totalConversationPages && (
+            <button
+              className="load-more-btn"
+              onClick={loadMoreConversations}
+              disabled={loadingConversations}
+            >
+              {loadingConversations ? (
+                <>
+                  <Loader2 size={14} className="spin" />
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <span>Load more</span>
+              )}
+            </button>)}
           </div>
         </div>
 
@@ -272,6 +360,24 @@ export default function Chat() {
             accept=".pdf,.doc,.docx,.xlsx,.xls"
             onChange={handleFileUpload}
           />
+
+          {/* Load more documents */}
+          {documents.length < totalDocuments && (
+            <button
+              className="load-more-btn"
+              onClick={loadMoreDocuments}
+              disabled={loadingDocuments}
+            >
+              {loadingDocuments ? (
+                <>
+                  <Loader2 size={14} className="spin" />
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <span>Load more</span>
+              )}
+            </button>
+          )}
 
           <button
             type="button"
@@ -336,7 +442,13 @@ export default function Chat() {
               </div>
             </div>
           ) : (
-            <div className="message-list">
+            <div className="message-list h-2" ref={messageListRef}>
+              {loadingMessages && (
+                <div className="loading-indicator">
+                  <Loader2 size={18} className="spin" />
+                  <span>Loading messages...</span>
+                </div>
+              )}
               {messages.map((msg, index) => (
                 <div
                   key={index}

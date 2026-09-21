@@ -215,6 +215,15 @@
   font-size: 10px;
 }
 
+.h2 {
+  margin: 0;
+
+  color: #dce8e5;
+
+  font-size: 34px;
+  font-weight: 600;
+}
+
 .document-list {
   margin-top: 9px;
 
@@ -283,6 +292,62 @@
 }
 
 
+/* Load more button */
+
+.load-more-btn {
+  width: 100%;
+  height: 34px;
+
+  margin-top: 9px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  border: 1px solid #2b4642;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: #91a39f;
+
+  font-size: 12px;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  background: #16211f;
+  border-color: #35615b;
+  color: #cbd8d5;
+}
+
+.load-more-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.load-more-btn svg {
+  color: #00d9b5;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 /* =========================================
    MAIN
 ========================================= */
@@ -294,6 +359,9 @@
 
   display: flex;
   flex-direction: column;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  ::-webkit-scrollbar { display: none; }
 }
 
 
@@ -522,6 +590,7 @@
   overflow-y: auto;
 
   padding: 30px 0;
+  flex-direction: column-reverse;
 }
 
 .chat-message {
@@ -554,6 +623,28 @@
 
   margin-top: 3px;
 
+  color: #00d9b5;
+}
+
+
+/* =========================================
+  Loading indicator
+========================================= */
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 12px 0;
+
+  color: #91a39f;
+
+  font-size: 13px;
+}
+
+.loading-indicator svg {
   color: #00d9b5;
 }
 

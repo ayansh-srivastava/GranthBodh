@@ -1,3 +1,6 @@
+import datetime
+from time import timezone
+
 from app.core.config import settings
 
 from google import genai
@@ -92,6 +95,7 @@ class RAGService:
             role=role,
             content=content,
             rewritten_content=rewritten_content,
+            created_at=datetime.datetime.now(datetime.timezone.utc),
         )
 
         session.add(message)
@@ -232,6 +236,11 @@ class RAGService:
         if not chunks:
             await self.save_message(session=session, conversation_id=conversation_id, role="user", content=payload.question, user_id=user_id, rewritten_content=question)
             message = await self.save_message(session=session, conversation_id=conversation_id, role="assistant", content="I don't know.", user_id=user_id)
+            try:
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                raise e
             return {
                 "answer": message,
                 "sources": [],
@@ -269,8 +278,8 @@ class RAGService:
             session.query(Conversation)
             .filter_by(user_id=user_id)
             .order_by(Conversation.updated_at.desc())
-            .limit(20)
-            .offset((page-1) * 20)
+            .limit(10)
+            .offset((page-1) * 10)
         )
 
         return GetConversationsResponse(
@@ -282,7 +291,7 @@ class RAGService:
                 }
                 for conversation in conversations
             ],
-            total_pages=(session.query(Conversation).filter_by(user_id=user_id).count() + 19) // 20,
+            total_pages=(session.query(Conversation).filter_by(user_id=user_id).count() + 9) // 10,
         )
 
     async def get_messages(self, conversation_id: str, page: int, user_id: str, session) -> list[dict]:
@@ -290,8 +299,8 @@ class RAGService:
             session.query(Message)
             .filter_by(conversation_id=conversation_id, user_id=user_id)
             .order_by(Message.created_at.desc())
-            .limit(20)
-            .offset((page - 1) * 20)
+            .limit(14)
+            .offset((page - 1) * 14)
             .all()
         )
         messages.reverse()
@@ -309,7 +318,7 @@ class RAGService:
             }
             for message in messages
         ],
-            "total_pages": (session.query(Message).filter_by(conversation_id=conversation_id, user_id=user_id).count() + 19) // 20,
+            "total_pages": (session.query(Message).filter_by(conversation_id=conversation_id, user_id=user_id).count() + 13) // 14,
         }
 
 rag_service = RAGService()

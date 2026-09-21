@@ -232,10 +232,11 @@ docker-compose.yml       Local database, API, and frontend services
 
 ## TODO
 
-- [ ] Load more in fronend.
+- [x] Load more in fronend.
 - [ ] Better auth than simple email password.
 - [ ] Streaming response for large documents.
 - [ ] Notification to user like uploading feedback, error notification in frontend.
+- [ ] Loader when uploading documents.
 
 ## License
 
